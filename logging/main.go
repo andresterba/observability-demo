@@ -22,7 +22,7 @@ func main() {
 		"backoff", time.Second,
 	)
 
-	fmt.Println("\n")
+	fmt.Println("test")
 
 	sugar.Infof("Failed to fetch URL: %s", url)
 
