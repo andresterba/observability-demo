@@ -18,3 +18,5 @@ Run with:
 ```
 
 You can find the [jaeger UI here](http://localhost:16686/search).
+
+![Example](example.png)
