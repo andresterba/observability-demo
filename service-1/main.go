@@ -50,9 +50,18 @@ func run(ctx context.Context) error {
 			log.Printf("Error shutting down tracer provider: %v", err)
 		}
 	}()
+	log := lib.CreateProductionLogger("service-1")
+	defer log.Sync()
+	logs := log.Sugar()
 
-	store := NewMemoryStore(traceProvider.Tracer("store"))
-	controller := NewController(store, traceProvider.Tracer("controller"))
+	httpSrvLogger := lib.CreateChildLogger(log, "http-server")
+	defer httpSrvLogger.Sync()
+
+	clientLogger := lib.CreateChildLogger(log, "client")
+	defer clientLogger.Sync()
+
+	store := NewClient(traceProvider.Tracer("store"), clientLogger)
+	controller := NewController(store, traceProvider.Tracer("controller"), httpSrvLogger)
 	srv := NewServer(controller)
 
 	// Handle SIGINT (CTRL+C) gracefully.
@@ -67,9 +76,9 @@ func run(ctx context.Context) error {
 		Handler:      srv,
 	}
 	go func() {
-		log.Printf("listening on %s\n", httpServer.Addr)
+		logs.Infof("listening on %s", httpServer.Addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
+			logs.Errorf("error listening and serving: %s", err)
 		}
 	}()
 	var wg sync.WaitGroup
@@ -81,7 +90,7 @@ func run(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			fmt.Fprintf(os.Stderr, "error shutting down http server: %s\n", err)
+			logs.Errorf("error shutting down http server: %s", err)
 		}
 	}()
 	wg.Wait()

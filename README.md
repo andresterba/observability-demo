@@ -17,6 +17,6 @@ Run with:
     curl -X POST "localhost:4040/?key=test&value=test"
 ```
 
-You can find the [jaeger UI here](http://localhost:16686/search).
+You can find the [Grafana UI here](http://localhost:3000/).
 
 ![Example](example.png)

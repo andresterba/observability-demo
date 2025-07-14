@@ -29,7 +29,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         ":1338",
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}

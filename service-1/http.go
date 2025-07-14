@@ -3,52 +3,53 @@ package main
 import (
 	"context"
 	"net/http"
-	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
-type Store interface {
-	Get(ctx context.Context, key string) string
-	Set(ctx context.Context, key, value string)
+type Client interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key, value string) error
 }
 
 type Controller struct {
-	// server is the HTTP server.
-	store  Store
+	client Client
+
 	tracer trace.Tracer
+	log    *zap.SugaredLogger
 }
 
-func NewController(store Store, tracer trace.Tracer) *Controller {
+func NewController(store Client, tracer trace.Tracer, log *zap.SugaredLogger) *Controller {
 	return &Controller{
-		store:  store,
+		client: store,
 		tracer: tracer,
+		log:    log,
 	}
 }
 
 func (c *Controller) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, span := c.tracer.Start(r.Context(), "in-controller-entry")
+	ctx, span := c.tracer.Start(r.Context(), "in-controller-entry", trace.WithAttributes(
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.host", r.Host),
+	))
 	defer span.End()
-
-	time.Sleep(1 * time.Second)
 
 	switch r.Method {
 	case "GET":
-		c.handleGet(w, r)
-		time.Sleep(1 * time.Second)
+		c.handleGet(ctx, w, r)
 	case "POST":
-		c.handlePost(w, r)
-		time.Sleep(1 * time.Second)
+		c.handlePost(ctx, w, r)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (c *Controller) handleGet(w http.ResponseWriter, r *http.Request) {
-	_, span := c.tracer.Start(r.Context(), "in-handle-get")
+func (c *Controller) handleGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	ctx, span := c.tracer.Start(ctx, "in-handle-get")
 	defer span.End()
-
-	time.Sleep(1 * time.Second)
 
 	key := r.URL.Query().Get("key")
 	if key == "" {
@@ -56,21 +57,17 @@ func (c *Controller) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	value := c.store.Get(r.Context(), key)
-	if value == "" {
-		time.Sleep(time.Second)
-
+	value, err := c.client.Get(ctx, key)
+	if err != nil {
 		http.Error(w, "key not found", http.StatusNotFound)
 		return
 	}
 
-	time.Sleep(time.Second)
-
 	w.Write([]byte(value))
 }
 
-func (c *Controller) handlePost(w http.ResponseWriter, r *http.Request) {
-	_, span := c.tracer.Start(r.Context(), "in-handle-post")
+func (c *Controller) handlePost(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	ctx, span := c.tracer.Start(ctx, "in-handle-post")
 	defer span.End()
 
 	key := r.URL.Query().Get("key")
@@ -85,6 +82,6 @@ func (c *Controller) handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.store.Set(r.Context(), key, value)
+	c.client.Set(ctx, key, value)
 	w.WriteHeader(http.StatusNoContent)
 }
