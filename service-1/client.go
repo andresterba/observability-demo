@@ -46,10 +46,19 @@ func (s *StoreClient) Get(ctx context.Context, key string) (string, error) {
 		return "", fmt.Errorf("failed to get key %s: %s", key, resp.Status)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			s.log.Errorf("failed to close response body: %v", err)
+		}
+	}()
 
 	var result lib.Result
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.log.Errorf("failed to read response body: %v", err)
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
 	if err := json.Unmarshal(body, &result); err != nil {
 		s.log.Errorf("failed to unmarshal response body: %v", err)
 

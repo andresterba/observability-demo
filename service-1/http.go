@@ -63,7 +63,12 @@ func (c *Controller) handleGet(ctx context.Context, w http.ResponseWriter, r *ht
 		return
 	}
 
-	w.Write([]byte(value))
+	_, err = w.Write([]byte(value))
+	if err != nil {
+		c.log.Errorw("failed to write response", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (c *Controller) handlePost(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -82,6 +87,11 @@ func (c *Controller) handlePost(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	c.client.Set(ctx, key, value)
+	err := c.client.Set(ctx, key, value)
+	if err != nil {
+		c.log.Errorw("failed to set value", "key", key, "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }

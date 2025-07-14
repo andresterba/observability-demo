@@ -69,11 +69,18 @@ func main() {
 	http.HandleFunc("/get", getHandler)
 
 	fmt.Println("Starting server on :8080...")
-	http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl.Execute(w, nil)
+	err := tmpl.Execute(w, nil)
+	if err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		return
+	}
 }
 
 func setHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,10 +104,24 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to make POST request", http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			http.Error(w, "Failed to close response body", http.StatusInternalServerError)
+			return
+		}
+	}()
 
-	body, _ := io.ReadAll(resp.Body)
-	tmpl.Execute(w, map[string]string{"Response": string(body)})
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to read response body", http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, map[string]string{"Response": string(body)})
+	if err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		return
+	}
 }
 
 func getHandler(w http.ResponseWriter, r *http.Request) {
@@ -123,8 +144,22 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to make GET request", http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			http.Error(w, "Failed to close response body", http.StatusInternalServerError)
+			return
+		}
+	}()
 
-	body, _ := io.ReadAll(resp.Body)
-	tmpl.Execute(w, map[string]string{"Response": string(body)})
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to read response body", http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, map[string]string{"Response": string(body)})
+	if err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		return
+	}
 }

@@ -11,7 +11,12 @@ const url = "http://my.site.example.com"
 
 func main() {
 	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	defer func() {
+		err := logger.Sync()
+		if err != nil {
+			fmt.Printf("Error syncing logger: %v\n", err)
+		}
+	}()
 	sugar := logger.Sugar()
 
 	fmt.Println("Structured logging:")

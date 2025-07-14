@@ -24,7 +24,7 @@ func NewMemoryStore(tracer trace.Tracer, logger *zap.SugaredLogger) Store {
 }
 
 func (s *MemoryStore) Get(ctx context.Context, key string) (string, error) {
-	ctx, span := s.tracer.Start(ctx, "in-store-get")
+	_, span := s.tracer.Start(ctx, "in-store-get")
 	defer span.End()
 
 	if value, ok := s.store[key]; ok {
@@ -37,7 +37,7 @@ func (s *MemoryStore) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (s *MemoryStore) Set(ctx context.Context, key, value string) error {
-	ctx, span := s.tracer.Start(ctx, "in-store-set")
+	_, span := s.tracer.Start(ctx, "in-store-set")
 	defer span.End()
 
 	s.store[key] = value

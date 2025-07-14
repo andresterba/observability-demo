@@ -12,8 +12,8 @@ import (
 )
 
 type Store interface {
-	Get(ctx context.Context, key string) (string, error)
-	Set(ctx context.Context, key, value string) error
+	Get(context.Context, string) (string, error)
+	Set(context.Context, string, string) error
 }
 
 type Controller struct {
@@ -77,7 +77,12 @@ func (c *Controller) handleGet(ctx context.Context, w http.ResponseWriter, r *ht
 	// write the JSON response
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(body)
+	_, err = w.Write(body)
+	if err != nil {
+		c.logger.Errorw("failed to write response", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 }
 

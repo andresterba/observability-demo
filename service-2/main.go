@@ -14,11 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-const name = "otel-example-2"
-
-var (
-	HTTPPort = "4041"
-)
+const HTTPPort = "4041"
 
 func NewServer(controller *Controller) http.Handler {
 	mux := http.NewServeMux()
@@ -52,14 +48,16 @@ func run(ctx context.Context) error {
 	}()
 
 	log := lib.CreateProductionLogger("service-2")
-	defer log.Sync()
+	defer func() {
+		err := log.Sync()
+		if err != nil {
+			log.Fatal("Error syncing logger")
+		}
+	}()
 	logs := log.Sugar()
 
 	httpSrvLogger := lib.CreateChildLogger(log, "http-server")
-	defer httpSrvLogger.Sync()
-
 	storeLogger := lib.CreateChildLogger(log, "store")
-	defer storeLogger.Sync()
 
 	store := NewMemoryStore(traceProvider.Tracer("store"), storeLogger)
 	controller := NewController(traceProvider.Tracer("controller"), store, httpSrvLogger)

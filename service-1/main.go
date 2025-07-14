@@ -14,11 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-const name = "otel-example"
-
-var (
-	HTTPPort = "4040"
-)
+const HTTPPort = "4040"
 
 func NewServer(controller *Controller) http.Handler {
 	mux := http.NewServeMux()
@@ -50,15 +46,19 @@ func run(ctx context.Context) error {
 			log.Printf("Error shutting down tracer provider: %v", err)
 		}
 	}()
+
 	log := lib.CreateProductionLogger("service-1")
-	defer log.Sync()
+	defer func() {
+		err := log.Sync()
+		if err != nil {
+			log.Error("Error syncing logger")
+		}
+
+	}()
+
 	logs := log.Sugar()
-
 	httpSrvLogger := lib.CreateChildLogger(log, "http-server")
-	defer httpSrvLogger.Sync()
-
 	clientLogger := lib.CreateChildLogger(log, "client")
-	defer clientLogger.Sync()
 
 	store := NewClient(traceProvider.Tracer("store"), clientLogger)
 	controller := NewController(store, traceProvider.Tracer("controller"), httpSrvLogger)
